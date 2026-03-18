@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "graphql-bridge": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-graphql-bridge/dist/index.js"],
+      "env": {
+        "GRAPHQL_API_URL": "https://your-api.example.com/graphql",
+        "GRAPHQL_INTROSPECTION_URL": "https://your-api.example.com/graphql",
+        "GRAPHQL_TOKEN": "your-bearer-token-here"
+      }
+    }
+  }
+}
