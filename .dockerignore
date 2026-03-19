@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+.claude
+schema-introspection.json
+*.md
+*.tsbuildinfo
