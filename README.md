@@ -120,6 +120,28 @@ Then in a Claude Code session, run `/mcp` to see available servers and tools.
 
 All per-operation tools accept a special `__fields` argument where you can provide a custom GraphQL selection set (e.g. `{ id name status }`). If omitted, only scalar fields are returned.
 
+## Docker
+
+### Build the image
+
+```bash
+docker build -t mcp-graphql-bridge .
+```
+
+### Add to Claude Code via Docker
+
+```bash
+claude mcp add --transport stdio \
+  --env GRAPHQL_API_URL=https://your-api.example.com/graphql \
+  --env GRAPHQL_INTROSPECTION_URL=https://your-api.example.com/graphql \
+  --env GRAPHQL_TOKEN=your-bearer-token \
+  graphql-bridge -- docker run -i --rm \
+  -e GRAPHQL_API_URL -e GRAPHQL_INTROSPECTION_URL -e GRAPHQL_TOKEN \
+  mcp-graphql-bridge
+```
+
+> **Note:** The `-i` flag (no `-t`) is required — it keeps stdin open for the MCP stdio protocol.
+
 ## Development
 
 ```bash
