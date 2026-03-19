@@ -5,7 +5,7 @@ Thank you for your interest in contributing to mcp-graphql-bridge!
 ## Getting started
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/mcp-graphql-bridge.git
+git clone https://github.com/murilopereira/mcp-graphql-bridge.git
 cd mcp-graphql-bridge
 npm install
 npm run build
@@ -26,7 +26,7 @@ npm run build # one-off TypeScript compile
 
 ## Reporting bugs
 
-Open an issue at the [issue tracker](https://github.com/YOUR_USERNAME/mcp-graphql-bridge/issues) and include:
+Open an issue at the [issue tracker](https://github.com/murilopereira/mcp-graphql-bridge/issues) and include:
 
 - Node.js version (`node --version`)
 - Steps to reproduce

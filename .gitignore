@@ -39,3 +39,6 @@ generated-schema.graphql
 
 # Local GraphQL schema snapshot (API-specific, not for sharing)
 schema-introspection.json
+
+# Project-specific agents
+.claude/agents/

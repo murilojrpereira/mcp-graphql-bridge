@@ -26,15 +26,17 @@
     "anthropic"
   ],
   "license": "MIT",
+  "mcpName": "io.github.murilopereira/mcp-graphql-bridge",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/mcp-graphql-bridge.git"
+    "url": "https://github.com/murilopereira/mcp-graphql-bridge.git"
   },
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/mcp-graphql-bridge/issues"
+    "url": "https://github.com/murilopereira/mcp-graphql-bridge/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/mcp-graphql-bridge#readme",
+  "homepage": "https://github.com/murilopereira/mcp-graphql-bridge#readme",
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon --watch \"src/**\" --ext \"ts\" --exec \"npm run build && npm run start\""
