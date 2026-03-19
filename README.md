@@ -1,7 +1,7 @@
 # mcp-graphql-bridge
 
 [![npm version](https://img.shields.io/npm/v/mcp-graphql-bridge.svg)](https://www.npmjs.com/package/mcp-graphql-bridge)
-[![CI](https://github.com/YOUR_USERNAME/mcp-graphql-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/mcp-graphql-bridge/actions/workflows/ci.yml)
+[![CI](https://github.com/murilopereira/mcp-graphql-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/murilopereira/mcp-graphql-bridge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 
@@ -31,7 +31,7 @@ npm install -g mcp-graphql-bridge
 ### Option B: Clone and build from source
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/mcp-graphql-bridge.git
+git clone https://github.com/murilopereira/mcp-graphql-bridge.git
 cd mcp-graphql-bridge
 npm install
 npm run build
@@ -57,7 +57,7 @@ Or pass them directly via the `claude mcp add` command (see below).
 
 ### 3. (Optional) Pre-generate schema snapshot
 
-If your API has introspection disabled at runtime, or you want faster startup, save the schema to a file:
+By default the server introspects your schema live on startup — no file needed. Use this step only if your API has introspection disabled in production, or you want faster startup times:
 
 ```bash
 curl -s -X POST https://your-api.example.com/graphql \
