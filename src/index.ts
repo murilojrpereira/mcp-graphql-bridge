@@ -353,4 +353,7 @@ async function main() {
   console.error("GraphQL MCP server running");
 }
 
-main();
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});

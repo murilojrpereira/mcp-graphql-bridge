@@ -1,0 +1,41 @@
+{
+  "$schema": "https://registry.modelcontextprotocol.io/schemas/server.schema.json",
+  "name": "io.github.murilopereira/mcp-graphql-bridge",
+  "description": "Generic MCP server that bridges any GraphQL API to Claude Code — one tool per query and mutation, auto-discovered via schema introspection.",
+  "repository": {
+    "url": "https://github.com/murilopereira/mcp-graphql-bridge",
+    "source": "https://github.com/murilopereira/mcp-graphql-bridge.git"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "name": "mcp-graphql-bridge",
+      "registry": "npm",
+      "scope": "public",
+      "transport": "stdio"
+    }
+  ],
+  "environmentVariables": [
+    {
+      "name": "GRAPHQL_API_URL",
+      "description": "GraphQL endpoint URL used for executing queries and mutations",
+      "isRequired": true,
+      "isSecret": false,
+      "format": "url"
+    },
+    {
+      "name": "GRAPHQL_INTROSPECTION_URL",
+      "description": "GraphQL endpoint URL used for schema introspection (can be the same as GRAPHQL_API_URL)",
+      "isRequired": true,
+      "isSecret": false,
+      "format": "url"
+    },
+    {
+      "name": "GRAPHQL_TOKEN",
+      "description": "Bearer token for authenticating with the GraphQL API. Omit for public or unauthenticated endpoints.",
+      "isRequired": false,
+      "isSecret": true,
+      "format": "string"
+    }
+  ]
+}

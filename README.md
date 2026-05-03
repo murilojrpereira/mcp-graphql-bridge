@@ -22,13 +22,15 @@ On startup the server will:
 
 ## Setup
 
-### Option A: Install from npm (recommended)
+### Step 1: Install
+
+#### Option A: Install from npm (recommended)
 
 ```bash
 npm install -g mcp-graphql-bridge
 ```
 
-### Option B: Clone and build from source
+#### Option B: Clone and build from source
 
 ```bash
 git clone https://github.com/murilopereira/mcp-graphql-bridge.git
@@ -37,7 +39,7 @@ npm install
 npm run build
 ```
 
-### 2. Configure environment variables
+### Step 2: Configure environment variables
 
 | Variable | Required | Description |
 |---|---|---|
@@ -55,7 +57,7 @@ GRAPHQL_TOKEN=your-bearer-token
 
 Or pass them directly via the `claude mcp add` command (see below).
 
-### 3. (Optional) Pre-generate schema snapshot
+### Step 3: (Optional) Pre-generate schema snapshot
 
 By default the server introspects your schema live on startup — no file needed. Use this step only if your API has introspection disabled in production, or you want faster startup times:
 
@@ -88,6 +90,8 @@ claude mcp add --transport stdio \
   --env GRAPHQL_TOKEN=your-bearer-token \
   graphql-bridge -- node /absolute/path/to/mcp-graphql-bridge/dist/index.js
 ```
+
+> **Important:** Make sure to use `mcp-graphql-bridge/dist/index.js` (the compiled output), not `mcp-graphql-bridge/index.js`. The TypeScript source must be built first with `npm run build`, and the entry point is in the `dist/` folder.
 
 ### Option B: Project scope (shared with your team via `.mcp.json`)
 
@@ -149,3 +153,31 @@ npm run dev   # watch mode: rebuilds and restarts on file changes
 npm run build # one-off TypeScript compile
 npm start     # run the compiled server
 ```
+
+## Troubleshooting
+
+### Error: Cannot find module '.../index.js'
+
+If you see an error like:
+```
+Error: Cannot find module '/path/to/mcp-graphql-bridge/index.js'
+```
+
+You are pointing to the wrong file. The TypeScript source must be compiled first, and the entry point is in the `dist/` folder:
+
+**Correct path:** `/path/to/mcp-graphql-bridge/dist/index.js`
+**Wrong path:** `/path/to/mcp-graphql-bridge/index.js`
+
+**Fix:**
+1. Ensure you ran `npm run build` (creates the `dist/` folder)
+2. Update your MCP configuration to use the full path ending in `/dist/index.js`
+
+### Schema introspection fails
+
+If the server starts but shows "Schema introspection failed", your GraphQL API may have introspection disabled in production. Use the curl command in step 3 of Setup to pre-generate a `schema-introspection.json` file.
+
+### Tools not appearing in Claude Code
+
+1. Run `claude mcp list` to verify the server is registered
+2. Run `/mcp` in a Claude Code session to see available tools
+3. Check that all required environment variables are set (`GRAPHQL_API_URL`, `GRAPHQL_INTROSPECTION_URL`, `GRAPHQL_TOKEN`)
