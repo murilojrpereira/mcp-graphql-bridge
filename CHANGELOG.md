@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-04
+
+### Fixed
+
+- Correct GitHub username in all URLs (`murilojrpereira`)
+- Update `server.json` to match official MCP registry schema format
+- Exclude test files from TypeScript compilation output
+
 ## [1.0.0] - 2026-03-21
 
 ### Added
