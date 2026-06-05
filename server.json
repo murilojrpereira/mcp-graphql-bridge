@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.murilojrpereira/mcp-graphql-bridge",
-  "description": "Generic MCP server that bridges any GraphQL API to Claude Code — one tool per query and mutation, auto-discovered via schema introspection.",
+  "description": "Bridges any GraphQL API to Claude Code — auto-generates MCP tools via schema introspection.",
   "repository": {
     "url": "https://github.com/murilojrpereira/mcp-graphql-bridge",
     "source": "github"

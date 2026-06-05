@@ -1,7 +1,7 @@
 # mcp-graphql-bridge
 
 [![npm version](https://img.shields.io/npm/v/mcp-graphql-bridge.svg)](https://www.npmjs.com/package/mcp-graphql-bridge)
-[![CI](https://github.com/murilopereira/mcp-graphql-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/murilopereira/mcp-graphql-bridge/actions/workflows/ci.yml)
+[![CI](https://github.com/murilojrpereira/mcp-graphql-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/murilojrpereira/mcp-graphql-bridge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 
@@ -33,7 +33,7 @@ npm install -g mcp-graphql-bridge
 #### Option B: Clone and build from source
 
 ```bash
-git clone https://github.com/murilopereira/mcp-graphql-bridge.git
+git clone https://github.com/murilojrpereira/mcp-graphql-bridge.git
 cd mcp-graphql-bridge
 npm install
 npm run build
