@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import "dotenv/config";
+import { createServer } from "http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { GraphQLClient } from "graphql-request";
 import { z } from "zod";
 
@@ -348,9 +350,37 @@ async function main() {
     }
   );
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("GraphQL MCP server running");
+  if (process.env.MCP_TRANSPORT === "http") {
+    const port = parseInt(process.env.PORT ?? "8080", 10);
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    await server.connect(transport);
+
+    const httpServer = createServer(async (req, res) => {
+      if (req.url === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok" }));
+        return;
+      }
+      if (req.url === "/mcp" || req.url?.startsWith("/mcp?")) {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        const raw = Buffer.concat(chunks).toString();
+        await transport.handleRequest(req, res, raw ? JSON.parse(raw) : undefined);
+        return;
+      }
+      res.writeHead(404).end();
+    });
+
+    httpServer.listen(port, () => {
+      console.error(`GraphQL MCP server (HTTP) listening on port ${port}`);
+    });
+  } else {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("GraphQL MCP server running");
+  }
 }
 
 main().catch((err) => {

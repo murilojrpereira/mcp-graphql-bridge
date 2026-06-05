@@ -1,0 +1,61 @@
+name: Push to ECR (AgentCore)
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region:
+        description: 'AWS region'
+        required: true
+        default: 'us-east-1'
+      ecr_repository:
+        description: 'ECR repository name'
+        required: true
+        default: 'mcp-graphql-bridge'
+      image_tag:
+        description: 'Image tag (defaults to git SHA)'
+        required: false
+
+jobs:
+  push:
+    name: Build & push to ECR
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          TAG="${{ inputs.image_tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="${{ github.sha }}"
+          fi
+          echo "value=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build, tag, and push image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ inputs.ecr_repository }}
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          IMAGE="$REGISTRY/$REPOSITORY:$TAG"
+          LATEST="$REGISTRY/$REPOSITORY:latest"
+          docker build -f Dockerfile.agentcore -t "$IMAGE" -t "$LATEST" .
+          docker push "$IMAGE"
+          docker push "$LATEST"
+          echo "Pushed: $IMAGE"
+          echo "Pushed: $LATEST"
