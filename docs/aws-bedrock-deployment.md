@@ -1,15 +1,93 @@
 # Deploying mcp-graphql-bridge on AWS for Amazon Bedrock
 
-## The core challenge
+## Option A — Bedrock AgentCore Runtime (recommended)
 
-The current server uses **stdio transport** — Claude Code spawns it as a child process. Bedrock can't do that. It calls tools via **HTTP**. So two things are needed:
+AgentCore is AWS's managed hosting environment built specifically for MCP servers. It runs the container using the native MCP protocol over HTTP, so automatic schema introspection and tool discovery work exactly as they do locally. Billing is active-consumption only (~$0.09/hr of compute), so you pay nothing when no agent is using the server.
 
-1. Re-expose the server over HTTP
-2. Translate between MCP tools and Bedrock's tool use format
+### Architecture
+
+```
+User / App
+    │
+    ▼
+Amazon Bedrock Agent
+    │  MCP tool call (HTTP)
+    ▼
+Bedrock AgentCore Runtime
+    │  container
+    ▼
+mcp-graphql-bridge (HTTP transport)
+    │
+    ▼
+GraphQL API
+```
+
+### What was built
+
+| File | Purpose |
+|---|---|
+| `src/index.ts` | `MCP_TRANSPORT=http` switches to `StreamableHTTPServerTransport` on `PORT` (default 8080). `/mcp` handles the MCP protocol, `/health` is for container health checks. Stdio mode is unchanged. |
+| `Dockerfile.agentcore` | Multi-stage build. Sets `MCP_TRANSPORT=http`, `PORT=8080`, exposes 8080, includes `HEALTHCHECK`. |
+| `.github/workflows/ecr-push.yml` | Manual dispatch: builds `Dockerfile.agentcore` and pushes `:sha` + `:latest` to ECR. Inputs: `aws_region`, `ecr_repository`, `image_tag`. |
+
+### Prerequisites
+
+Set these secrets in the GitHub repo (Settings → Secrets → Actions):
+
+| Secret | Value |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | IAM user key with ECR push permissions |
+| `AWS_SECRET_ACCESS_KEY` | Corresponding secret |
+
+### Step 1 — Create an ECR repository
+
+```bash
+aws ecr create-repository \
+  --repository-name mcp-graphql-bridge \
+  --region us-east-1
+```
+
+### Step 2 — Push the image to ECR
+
+Go to **Actions → Push to ECR (AgentCore) → Run workflow**, fill in:
+
+- `aws_region`: e.g. `us-east-1`
+- `ecr_repository`: `mcp-graphql-bridge`
+- `image_tag`: leave blank to use git SHA
+
+### Step 3 — Host in Bedrock AgentCore
+
+In the AWS Console:
+
+1. **Bedrock → AgentCore → Agent Runtime → Host Agent**
+2. Point to your ECR image (`<account>.dkr.ecr.<region>.amazonaws.com/mcp-graphql-bridge:latest`)
+3. Set environment variables:
+   - `GRAPHQL_API_URL`
+   - `GRAPHQL_INTROSPECTION_URL`
+   - `GRAPHQL_TOKEN`
+4. AgentCore will call `/health` to confirm the container is ready, then serve MCP requests at `/mcp`
+
+### Step 4 — Connect to a Bedrock Agent
+
+In the Bedrock Agent settings, add the AgentCore host as an MCP tool source. The agent will auto-discover all `query__*` and `mutation__*` tools via introspection — no manual schema upload needed.
+
+### Updating after a code change
+
+```bash
+# Push a new image (via GitHub Actions or locally):
+docker build -f Dockerfile.agentcore -t <ecr-uri>:latest .
+docker push <ecr-uri>:latest
+
+# Then redeploy in AgentCore console (or update the agent alias).
+```
 
 ---
 
-## Architecture: Lambda + Bedrock Agents
+## Option B — Lambda + Bedrock Agents (alternative)
+
+This approach predates AgentCore. It requires translating between the Bedrock tool-call format and the GraphQL API manually, generating an OpenAPI schema, and hosting it in S3. More setup, no idle-cost savings. Documented below for reference.
+
+### Architecture
 
 ```
 User / App
