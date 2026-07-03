@@ -45,7 +45,8 @@ npm run build
 |---|---|---|
 | `GRAPHQL_API_URL` | Yes | Endpoint used for queries and mutations |
 | `GRAPHQL_INTROSPECTION_URL` | Yes | Endpoint used for schema introspection (can be the same as above) |
-| `GRAPHQL_TOKEN` | Yes | Bearer token for authentication |
+| `GRAPHQL_TOKEN` | No | Bearer token for GraphQL authentication. Omit for public APIs. |
+| `MCP_AUTH_TOKEN` | No | Bearer token required by the hosted `/mcp` HTTP endpoint when `MCP_TRANSPORT=http` |
 
 You can set these in a `.env` file at the project root:
 
@@ -145,6 +146,25 @@ claude mcp add --transport stdio \
 ```
 
 > **Note:** The `-i` flag (no `-t`) is required — it keeps stdin open for the MCP stdio protocol.
+
+## HTTP deployment
+
+For hosted MCP access, run the HTTP transport instead of stdio:
+
+```bash
+docker build -f Dockerfile.http -t mcp-graphql-bridge-http .
+docker run --rm -p 8080:8080 \
+  -e GRAPHQL_API_URL=https://your-api.example.com/graphql \
+  -e GRAPHQL_INTROSPECTION_URL=https://your-api.example.com/graphql \
+  -e GRAPHQL_TOKEN=your-bearer-token \
+  mcp-graphql-bridge-http
+```
+
+Health checks are available at `/health`; MCP requests are served at `/mcp`.
+
+For public-routable deployments, set `MCP_AUTH_TOKEN` and configure clients to send `Authorization: Bearer <token>` to `/mcp`.
+
+See [`docs/deployment.md`](docs/deployment.md) for AWS, Cloudflare, and other container hosting options.
 
 ## Development
 
