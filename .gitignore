@@ -42,3 +42,6 @@ schema-introspection.json
 
 # Project-specific agents
 .claude/agents/
+
+# Project-specific skills
+.claude/skills/
