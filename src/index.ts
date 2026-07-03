@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import "dotenv/config";
-import { createServer } from "http";
+import { createServer, type IncomingMessage } from "http";
+import { timingSafeEqual } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -194,6 +195,34 @@ const INTROSPECTION_QUERY = `
   }
 `;
 
+// ── HTTP transport helpers ────────────────────────────────────────────────────
+
+const MAX_MCP_BODY_BYTES = 10 * 1024 * 1024; // 10MB
+
+/** Constant-time check of the `Authorization: Bearer <token>` header */
+function isAuthorized(req: IncomingMessage): boolean {
+  if (!MCP_AUTH_TOKEN) return true;
+  const expected = Buffer.from(`Bearer ${MCP_AUTH_TOKEN}`);
+  const actual = Buffer.from(req.headers.authorization ?? "");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+/** Read the full request body, enforcing a size cap. Returns null if the body is too large. */
+async function readRequestBody(req: IncomingMessage): Promise<Buffer | null> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buf.length;
+    if (total > MAX_MCP_BODY_BYTES) {
+      req.destroy();
+      return null;
+    }
+    chunks.push(buf);
+  }
+  return Buffer.concat(chunks);
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -356,27 +385,52 @@ async function main() {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
 
+    if (!MCP_AUTH_TOKEN) {
+      console.error(
+        "Warning: MCP_AUTH_TOKEN is not set — the /mcp endpoint is unauthenticated. Set MCP_AUTH_TOKEN to protect public-routable deployments."
+      );
+    }
+
     const httpServer = createServer(async (req, res) => {
-      if (req.url === "/" || req.url === "/health") {
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ status: "ok", mcpEndpoint: "/mcp" }));
-        return;
-      }
-      if (req.url === "/mcp" || req.url?.startsWith("/mcp?")) {
-        if (MCP_AUTH_TOKEN && req.headers.authorization !== `Bearer ${MCP_AUTH_TOKEN}`) {
-          res.writeHead(401, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Unauthorized" }));
+      try {
+        if (req.url === "/" || req.url === "/health") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ status: "ok", mcpEndpoint: "/mcp" }));
           return;
         }
-        const chunks: Buffer[] = [];
-        for await (const chunk of req) {
-          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        if (req.url === "/mcp" || req.url?.startsWith("/mcp?")) {
+          // Always drain the body first so rejected requests don't leave the
+          // connection in a state that prevents keep-alive reuse.
+          const body = await readRequestBody(req);
+          if (body === null) {
+            res.writeHead(413, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Payload too large" }));
+            return;
+          }
+          if (!isAuthorized(req)) {
+            res.writeHead(401, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Unauthorized" }));
+            return;
+          }
+          let parsed: unknown;
+          try {
+            parsed = body.length ? JSON.parse(body.toString()) : undefined;
+          } catch {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Invalid JSON" }));
+            return;
+          }
+          await transport.handleRequest(req, res, parsed);
+          return;
         }
-        const raw = Buffer.concat(chunks).toString();
-        await transport.handleRequest(req, res, raw ? JSON.parse(raw) : undefined);
-        return;
+        res.writeHead(404).end();
+      } catch (err) {
+        console.error("Error handling HTTP request:", err);
+        if (!res.headersSent) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Internal server error" }));
+        }
       }
-      res.writeHead(404).end();
     });
 
     httpServer.listen(port, () => {
