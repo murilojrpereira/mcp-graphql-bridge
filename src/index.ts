@@ -10,6 +10,7 @@ import { z } from "zod";
 const GRAPHQL_URL = process.env.GRAPHQL_API_URL;
 const INTROSPECTION_URL = process.env.GRAPHQL_INTROSPECTION_URL;
 const BEARER_TOKEN = process.env.GRAPHQL_TOKEN ?? "";
+const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN ?? "";
 
 if (!GRAPHQL_URL) {
   console.error("Error: GRAPHQL_API_URL environment variable is required.");
@@ -20,7 +21,7 @@ if (!INTROSPECTION_URL) {
   process.exit(1);
 }
 
-const headers = { Authorization: `Bearer ${BEARER_TOKEN}` };
+const headers: Record<string, string> = BEARER_TOKEN ? { Authorization: `Bearer ${BEARER_TOKEN}` } : {};
 
 // Client for actual queries/mutations
 const client = new GraphQLClient(GRAPHQL_URL, { headers });
@@ -356,12 +357,17 @@ async function main() {
     await server.connect(transport);
 
     const httpServer = createServer(async (req, res) => {
-      if (req.url === "/health") {
+      if (req.url === "/" || req.url === "/health") {
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ status: "ok" }));
+        res.end(JSON.stringify({ status: "ok", mcpEndpoint: "/mcp" }));
         return;
       }
       if (req.url === "/mcp" || req.url?.startsWith("/mcp?")) {
+        if (MCP_AUTH_TOKEN && req.headers.authorization !== `Bearer ${MCP_AUTH_TOKEN}`) {
+          res.writeHead(401, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Unauthorized" }));
+          return;
+        }
         const chunks: Buffer[] = [];
         for await (const chunk of req) {
           chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
