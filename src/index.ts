@@ -226,11 +226,6 @@ async function readRequestBody(req: IncomingMessage): Promise<Buffer | null> {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const server = new McpServer({
-    name: "mcp-graphql-bridge",
-    version: "1.0.0",
-  });
-
   // Try to load schema from static file first, then live introspection
   let queryFields: GqlField[] = [];
   let mutationFields: GqlField[] = [];
@@ -259,131 +254,138 @@ async function main() {
     `Registering ${queryFields.length} query tools and ${mutationFields.length} mutation tools...`
   );
 
-  // Register one tool per Query field
-  for (const field of queryFields) {
-    const argsSchema = buildArgsSchema(field.args);
-    const returnTypeName = getBaseType(field.type).name ?? "data";
-    const defaultFields = isScalar(field.type)
-      ? ""
-      : `{ __typename }`;
+  // Builds a fresh McpServer with all tools registered. The stateless HTTP
+  // transport requires a new server+transport pair per request, so this is
+  // called once for stdio and once per request for HTTP.
+  function buildServer(): McpServer {
+    const server = new McpServer({
+      name: "mcp-graphql-bridge",
+      version: "1.0.0",
+    });
 
-    server.tool(
-      `query__${field.name}`,
-      `[QUERY] ${field.description ?? field.name}. Returns: ${typeString(field.type)}`,
-      argsSchema,
-      async (rawArgs) => {
-        const { __fields, ...variables } = rawArgs as Record<string, unknown> & { __fields?: string };
-        const fields = __fields ?? defaultFields;
-        const operation = buildOperation("query", field.name, field.args, fields);
-        try {
-          const data = await client.request(operation, variables);
-          return {
-            content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-          };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Error: ${msg}` }],
-            isError: true,
-          };
-        }
-      }
-    );
-  }
+    // Register one tool per Query field
+    for (const field of queryFields) {
+      const argsSchema = buildArgsSchema(field.args);
+      const defaultFields = isScalar(field.type) ? "" : `{ __typename }`;
 
-  // Register one tool per Mutation field
-  for (const field of mutationFields) {
-    const argsSchema = buildArgsSchema(field.args);
-    const defaultFields = isScalar(field.type) ? "" : `{ __typename }`;
-
-    server.tool(
-      `mutation__${field.name}`,
-      `[MUTATION] ${field.description ?? field.name}. Returns: ${typeString(field.type)}`,
-      argsSchema,
-      async (rawArgs) => {
-        const { __fields, ...variables } = rawArgs as Record<string, unknown> & { __fields?: string };
-        const fields = __fields ?? defaultFields;
-        const operation = buildOperation("mutation", field.name, field.args, fields);
-        try {
-          const data = await client.request(operation, variables);
-          return {
-            content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-          };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Error: ${msg}` }],
-            isError: true,
-          };
-        }
-      }
-    );
-  }
-
-  // Generic fallback tool — always available
-  server.tool(
-    "execute_graphql",
-    "Execute any GraphQL query or mutation against the API. Use this when no specific tool exists for your operation.",
-    {
-      query: z.string().describe("Full GraphQL query or mutation string including selection set"),
-      variables: z.record(z.unknown()).optional().describe("Variables for the operation"),
-    },
-    async ({ query, variables }) => {
-      try {
-        const data = await client.request(query, variables ?? {});
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true };
-      }
-    }
-  );
-
-  // Bonus: type explorer tool
-  server.tool(
-    "get_type_details",
-    "Get fields of a specific GraphQL type to know what to put in __fields",
-    {
-      typeName: z
-        .string()
-        .describe("GraphQL type name, e.g. 'Machine', 'WorkOrder', 'Shift'"),
-    },
-    async ({ typeName }) => {
-      const query = `
-        query GetType($name: String!) {
-          __type(name: $name) {
-            name kind description
-            fields {
-              name description
-              type { kind name ofType { kind name ofType { kind name } } }
-            }
-            inputFields {
-              name description
-              type { kind name ofType { kind name } }
-            }
-            enumValues { name description }
+      server.tool(
+        `query__${field.name}`,
+        `[QUERY] ${field.description ?? field.name}. Returns: ${typeString(field.type)}`,
+        argsSchema,
+        async (rawArgs) => {
+          const { __fields, ...variables } = rawArgs as Record<string, unknown> & { __fields?: string };
+          const fields = __fields ?? defaultFields;
+          const operation = buildOperation("query", field.name, field.args, fields);
+          try {
+            const data = await client.request(operation, variables);
+            return {
+              content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+            };
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return {
+              content: [{ type: "text", text: `Error: ${msg}` }],
+              isError: true,
+            };
           }
         }
-      `;
-      try {
-        const data = await client.request(query, { name: typeName });
-        return {
-          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-        };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text", text: `Error: ${msg}` }],
-          isError: true,
-        };
-      }
+      );
     }
-  );
+
+    // Register one tool per Mutation field
+    for (const field of mutationFields) {
+      const argsSchema = buildArgsSchema(field.args);
+      const defaultFields = isScalar(field.type) ? "" : `{ __typename }`;
+
+      server.tool(
+        `mutation__${field.name}`,
+        `[MUTATION] ${field.description ?? field.name}. Returns: ${typeString(field.type)}`,
+        argsSchema,
+        async (rawArgs) => {
+          const { __fields, ...variables } = rawArgs as Record<string, unknown> & { __fields?: string };
+          const fields = __fields ?? defaultFields;
+          const operation = buildOperation("mutation", field.name, field.args, fields);
+          try {
+            const data = await client.request(operation, variables);
+            return {
+              content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+            };
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return {
+              content: [{ type: "text", text: `Error: ${msg}` }],
+              isError: true,
+            };
+          }
+        }
+      );
+    }
+
+    // Generic fallback tool — always available
+    server.tool(
+      "execute_graphql",
+      "Execute any GraphQL query or mutation against the API. Use this when no specific tool exists for your operation.",
+      {
+        query: z.string().describe("Full GraphQL query or mutation string including selection set"),
+        variables: z.record(z.unknown()).optional().describe("Variables for the operation"),
+      },
+      async ({ query, variables }) => {
+        try {
+          const data = await client.request(query, variables ?? {});
+          return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true };
+        }
+      }
+    );
+
+    // Bonus: type explorer tool
+    server.tool(
+      "get_type_details",
+      "Get fields of a specific GraphQL type to know what to put in __fields",
+      {
+        typeName: z
+          .string()
+          .describe("GraphQL type name, e.g. 'Machine', 'WorkOrder', 'Shift'"),
+      },
+      async ({ typeName }) => {
+        const query = `
+          query GetType($name: String!) {
+            __type(name: $name) {
+              name kind description
+              fields {
+                name description
+                type { kind name ofType { kind name ofType { kind name } } }
+              }
+              inputFields {
+                name description
+                type { kind name ofType { kind name } }
+              }
+              enumValues { name description }
+            }
+          }
+        `;
+        try {
+          const data = await client.request(query, { name: typeName });
+          return {
+            content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+          };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return {
+            content: [{ type: "text", text: `Error: ${msg}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    return server;
+  }
 
   if (process.env.MCP_TRANSPORT === "http") {
     const port = parseInt(process.env.PORT ?? "8080", 10);
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    await server.connect(transport);
 
     if (!MCP_AUTH_TOKEN) {
       console.error(
@@ -399,6 +401,11 @@ async function main() {
           return;
         }
         if (req.url === "/mcp" || req.url?.startsWith("/mcp?")) {
+          if (req.method !== "POST") {
+            res.writeHead(405, { "Content-Type": "application/json", Allow: "POST" });
+            res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed." }, id: null }));
+            return;
+          }
           // Always drain the body first so rejected requests don't leave the
           // connection in a state that prevents keep-alive reuse.
           const body = await readRequestBody(req);
@@ -420,6 +427,15 @@ async function main() {
             res.end(JSON.stringify({ error: "Invalid JSON" }));
             return;
           }
+
+          // Stateless mode requires a fresh server+transport per request.
+          const requestServer = buildServer();
+          const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+          await requestServer.connect(transport);
+          res.on("close", () => {
+            transport.close();
+            requestServer.close();
+          });
           await transport.handleRequest(req, res, parsed);
           return;
         }
@@ -437,6 +453,7 @@ async function main() {
       console.error(`GraphQL MCP server (HTTP) listening on port ${port}`);
     });
   } else {
+    const server = buildServer();
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error("GraphQL MCP server running");
