@@ -8,27 +8,29 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { GraphQLClient } from "graphql-request";
 import { z } from "zod";
 
-const GRAPHQL_URL = process.env.GRAPHQL_API_URL;
-const INTROSPECTION_URL = process.env.GRAPHQL_INTROSPECTION_URL;
+const DEFAULT_GRAPHQL_URL = "https://countries.trevorblades.com/graphql";
+
+const GRAPHQL_URL = process.env.GRAPHQL_API_URL || DEFAULT_GRAPHQL_URL;
+const INTROSPECTION_URL = process.env.GRAPHQL_INTROSPECTION_URL || GRAPHQL_URL;
 const BEARER_TOKEN = process.env.GRAPHQL_TOKEN ?? "";
+const INTROSPECTION_TOKEN = process.env.GRAPHQL_INTROSPECTION_TOKEN || BEARER_TOKEN;
 const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN ?? "";
 
-if (!GRAPHQL_URL) {
-  console.error("Error: GRAPHQL_API_URL environment variable is required.");
-  process.exit(1);
-}
-if (!INTROSPECTION_URL) {
-  console.error("Error: GRAPHQL_INTROSPECTION_URL environment variable is required.");
-  process.exit(1);
+if (!process.env.GRAPHQL_API_URL) {
+  console.error(`No GRAPHQL_API_URL set — using public demo API: ${DEFAULT_GRAPHQL_URL}`);
+  console.error("Replace with your own API via GRAPHQL_API_URL for real use.");
 }
 
 const headers: Record<string, string> = BEARER_TOKEN ? { Authorization: `Bearer ${BEARER_TOKEN}` } : {};
+const introspectionHeaders: Record<string, string> = INTROSPECTION_TOKEN
+  ? { Authorization: `Bearer ${INTROSPECTION_TOKEN}` }
+  : {};
 
 // Client for actual queries/mutations
 const client = new GraphQLClient(GRAPHQL_URL, { headers });
 
 // Client for schema introspection only
-const introspectionClient = new GraphQLClient(INTROSPECTION_URL, { headers });
+const introspectionClient = new GraphQLClient(INTROSPECTION_URL, { headers: introspectionHeaders });
 
 // ── Introspection types ───────────────────────────────────────────────────────
 

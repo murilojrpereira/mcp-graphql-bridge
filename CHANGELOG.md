@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `GRAPHQL_INTROSPECTION_TOKEN` for deployments where schema introspection requires different credentials than query/mutation execution. Falls back to `GRAPHQL_TOKEN` if unset.
+- Fallback to a public demo GraphQL API (`https://countries.trevorblades.com/graphql`) when `GRAPHQL_API_URL` is unset, so the server can be tried with zero configuration.
+- `docs/architecture.md` documenting the stdio vs. HTTP transport model, the token model, and why the GraphQL endpoint is fixed per deployment rather than a runtime parameter.
+
+### Changed
+
+- `GRAPHQL_API_URL` and `GRAPHQL_INTROSPECTION_URL` are no longer hard-required at startup — they default to the public demo API instead of exiting the process.
+
 ## [1.0.1] - 2026-05-04
 
 ### Fixed

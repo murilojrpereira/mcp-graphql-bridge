@@ -20,14 +20,21 @@ Hosted platforms should use `Dockerfile.http`. It exposes:
 
 | Variable | Required | Description |
 |---|---|---|
-| `GRAPHQL_API_URL` | Yes | Endpoint used for queries and mutations |
-| `GRAPHQL_INTROSPECTION_URL` | Yes | Endpoint used for schema introspection |
-| `GRAPHQL_TOKEN` | No | Bearer token. Omit for public GraphQL APIs. |
+| `GRAPHQL_API_URL` | No | Endpoint used for queries and mutations. Defaults to a public demo API if unset — always set this for a real deployment. |
+| `GRAPHQL_INTROSPECTION_URL` | No | Endpoint used for schema introspection. Defaults to `GRAPHQL_API_URL` if unset. |
+| `GRAPHQL_TOKEN` | No | Bearer token for query/mutation execution. Omit for public GraphQL APIs. |
+| `GRAPHQL_INTROSPECTION_TOKEN` | No | Bearer token for introspection, if different from execution. Defaults to `GRAPHQL_TOKEN`. |
 | `MCP_TRANSPORT` | Yes for hosting | Set to `http` |
 | `PORT` | Platform-dependent | Defaults to `8080` |
 | `MCP_AUTH_TOKEN` | Recommended | Bearer token required by `/mcp` when set |
 
 Set `MCP_AUTH_TOKEN` for any public-routable deployment. Health checks remain unauthenticated at `/health`, while `/mcp` requires `Authorization: Bearer <token>` when this variable is configured.
+
+`GRAPHQL_API_URL` is fixed per deployment rather than a per-request or
+per-client parameter — this is a deliberate SSRF-avoidance decision, not a
+limitation. See [`docs/architecture.md`](architecture.md) for the full
+reasoning, the token model, and how stdio and HTTP transports differ in
+what's isolated per client.
 
 ## AWS
 
