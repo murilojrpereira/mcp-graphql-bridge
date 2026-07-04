@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/mcp-graphql-bridge.svg)](https://www.npmjs.com/package/mcp-graphql-bridge)
 [![CI](https://github.com/murilojrpereira/mcp-graphql-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/murilojrpereira/mcp-graphql-bridge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node.js >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
+[![Node.js >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 
 A generic MCP (Model Context Protocol) server that bridges any GraphQL API to Claude Code. It introspects your GraphQL schema and exposes each query and mutation as an individual tool, letting Claude interact with your API directly.
 
@@ -18,7 +18,7 @@ On startup the server will:
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20
 
 ## Setup
 
