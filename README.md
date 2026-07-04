@@ -207,4 +207,4 @@ If the server starts but shows "Schema introspection failed", your GraphQL API m
 
 1. Run `claude mcp list` to verify the server is registered
 2. Run `/mcp` in a Claude Code session to see available tools
-3. Check that all required environment variables are set (`GRAPHQL_API_URL`, `GRAPHQL_INTROSPECTION_URL`, `GRAPHQL_TOKEN`)
+3. Check that your GraphQL API's environment variables are set correctly (`GRAPHQL_API_URL`, `GRAPHQL_INTROSPECTION_URL`, `GRAPHQL_TOKEN`) — these are optional and default to a public demo API, so if tools still aren't appearing with your own API configured, check its credentials and endpoint URLs
