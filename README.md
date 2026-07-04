@@ -43,10 +43,17 @@ npm run build
 
 | Variable | Required | Description |
 |---|---|---|
-| `GRAPHQL_API_URL` | Yes | Endpoint used for queries and mutations |
-| `GRAPHQL_INTROSPECTION_URL` | Yes | Endpoint used for schema introspection (can be the same as above) |
-| `GRAPHQL_TOKEN` | No | Bearer token for GraphQL authentication. Omit for public APIs. |
+| `GRAPHQL_API_URL` | No | Endpoint used for queries and mutations. Defaults to a public demo API ([countries.trevorblades.com](https://countries.trevorblades.com/graphql)) if unset — replace with your own for real use. |
+| `GRAPHQL_INTROSPECTION_URL` | No | Endpoint used for schema introspection. Defaults to `GRAPHQL_API_URL` if unset. |
+| `GRAPHQL_TOKEN` | No | Bearer token for GraphQL authentication (used for query/mutation execution). Omit for public APIs. |
+| `GRAPHQL_INTROSPECTION_TOKEN` | No | Bearer token for schema introspection, if it requires different credentials than execution (e.g. a separate schema registry). Defaults to `GRAPHQL_TOKEN` if unset. |
 | `MCP_AUTH_TOKEN` | No | Bearer token required by the hosted `/mcp` HTTP endpoint when `MCP_TRANSPORT=http` |
+
+No configuration is required to try the server — with nothing set, it starts
+against the public demo API above and logs that it's doing so. See
+[`docs/architecture.md`](docs/architecture.md) for the full token model and
+why the GraphQL endpoint is fixed per deployment rather than a per-request
+parameter.
 
 You can set these in a `.env` file at the project root:
 

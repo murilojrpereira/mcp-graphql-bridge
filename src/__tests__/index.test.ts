@@ -14,8 +14,8 @@ describe('mcp-graphql-bridge', () => {
   });
 
   describe('environment validation', () => {
-    it('should validate that required env vars are checked', () => {
-      // Read the source file and verify the validation logic exists
+    it('should default GRAPHQL_API_URL and GRAPHQL_INTROSPECTION_URL when unset', () => {
+      // Read the source file and verify the fallback logic exists
       const fs = require('fs');
       const path = require('path');
       const sourceFile = fs.readFileSync(
@@ -23,10 +23,22 @@ describe('mcp-graphql-bridge', () => {
         'utf-8'
       );
 
-      // Verify the source contains the required env var checks
-      expect(sourceFile).toContain('GRAPHQL_API_URL environment variable is required');
-      expect(sourceFile).toContain('GRAPHQL_INTROSPECTION_URL environment variable is required');
-      expect(sourceFile).toContain('process.exit(1)');
+      // Verify the source falls back to a public demo API instead of exiting
+      expect(sourceFile).toContain('DEFAULT_GRAPHQL_URL');
+      expect(sourceFile).toContain('process.env.GRAPHQL_API_URL || DEFAULT_GRAPHQL_URL');
+      expect(sourceFile).toContain('process.env.GRAPHQL_INTROSPECTION_URL || GRAPHQL_URL');
+    });
+
+    it('should support a separate introspection token that falls back to GRAPHQL_TOKEN', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const sourceFile = fs.readFileSync(
+        path.join(__dirname, '../index.ts'),
+        'utf-8'
+      );
+
+      expect(sourceFile).toContain('GRAPHQL_INTROSPECTION_TOKEN');
+      expect(sourceFile).toContain('process.env.GRAPHQL_INTROSPECTION_TOKEN || BEARER_TOKEN');
     });
 
     it('should have error handling for main()', () => {
