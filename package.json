@@ -1,6 +1,6 @@
 {
   "name": "mcp-graphql-bridge",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Generic MCP server that bridges any GraphQL API to Claude Code — one tool per query and mutation, auto-discovered via schema introspection.",
   "type": "module",
   "main": "dist/index.js",
