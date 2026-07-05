@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
 
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +37,18 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Bump version and push tag
+        id: bump
         run: |
-          npm version ${{ inputs.bump }} -m "chore: release v%s"
+          NEW_TAG=$(npm version ${{ inputs.bump }} -m "chore: release v%s")
           git push origin main --follow-tags
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger release workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A push made with GITHUB_TOKEN never triggers other workflows
+          # (GitHub's anti-recursion safeguard), so the tag push above won't
+          # fire release.yml's `on: push: tags:` trigger on its own.
+          # Explicitly dispatching it here works around that.
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "${{ steps.bump.outputs.tag }}"
