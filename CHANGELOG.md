@@ -16,8 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `GRAPHQL_API_URL` and `GRAPHQL_INTROSPECTION_URL` are no longer hard-required at startup — they default to the public demo API instead of exiting the process.
-- Minimum supported Node.js version raised from 18 to 20. CI and the release pipeline now test Node 20.x and 22.x only. Node 18 was dropped because `vitest`'s `rolldown` dependency requires `node:util`'s `styleText` export (Node 20.12+), which broke CI on Node 18.x.
-- The stdio `Dockerfile` now builds on `node:20-alpine` (previously `node:18-alpine`), matching `Dockerfile.http`/`Dockerfile.agentcore`, and installs with `--ignore-scripts` to fix a build failure where `npm ci` triggered the `prepare`/`build` script before source files were copied in.
 
 ## [1.0.1] - 2026-05-04
 

@@ -17,7 +17,7 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=20.0"
+    "node": ">=18.0"
   },
   "keywords": [
     "mcp",
