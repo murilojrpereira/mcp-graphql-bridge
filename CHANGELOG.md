@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `GRAPHQL_MAX_TOOLS` (default 128) caps how many query/mutation tools get registered, prioritizing queries over mutations when truncating. Previously every root field registered with no cap at all — GitHub's GraphQL API alone has 284 (32 queries, 252 mutations).
+- `GRAPHQL_INCLUDE_MUTATIONS` (default `true`) — set to `false` to exclude every mutation field for a read-only deployment.
+- `GRAPHQL_MAX_RETRIES` (default `0`, disabled) — opt-in retry with exponential backoff (honoring `Retry-After`) for `429`/`502`/`503`/`504` responses.
+- Secret redaction: configured and per-call tokens/headers are scrubbed from error text and response bodies before reaching the calling LLM.
+- Per-call `bearer_token`/`custom_headers` argument overrides on every tool, mirroring the OpenAPI bridge's multi-tenant credential model.
+- Real unit tests (65 across 6 new test files) for schema introspection, type resolution, Zod arg mapping, operation building, execution/retries, and HTTP auth — the source was refactored from one 468-line file into `introspection.ts`/`zod.ts`/`operation.ts`/`executor.ts`/`auth.ts`/`tools.ts` to make this possible. The previous test suite only asserted that certain strings appeared in the source file, not that any function behaved correctly.
+- Step-by-step README examples (Countries API + GitHub's GraphQL API) verified against the real APIs.
+- Updated `SECURITY.md` and a README "Security" section describing the fixed-target-URL (no SSRF) and secret-redaction design properties.
+
+### Fixed
+- Fixed a crash (`TypeError: Cannot read properties of undefined (reading 'kind')`) that brought down the entire server on startup when registering a schema with a field type wrapped deeper than the introspection query's fixed depth — e.g. GitHub's `marketplaceCategories: [MarketplaceCategory!]!`, an extremely common shape. `getBaseType`/`typeString` now treat a truncated wrapper chain as an `Unknown` type instead of dereferencing `undefined`.
+- Schema introspection against the public Countries demo API (this project's zero-config default) previously failed outright — its CDN-hosted endpoint enforces a query depth limit that the introspection query exceeded — silently falling back to only the two generic tools with the real error swallowed behind a generic message. Introspection now retries at a shallower, verified-safe depth and succeeds; the real upstream error is logged at every attempt.
+- **Security**: `GRAPHQL_INCLUDE_MUTATIONS=false` only excluded the generated `mutation__*` tools; `execute_graphql` still accepted and executed arbitrary mutations with the full configured token, silently defeating the read-only setting it was documented as providing. `execute_graphql` now parses the query (via the `graphql` package) and rejects it when it contains a mutation and mutations are disabled; unparseable input is treated as a mutation (fails closed) rather than assumed safe.
+- Hardened `redactSecrets` against a latent prefix-collision case: if one configured secret happened to be a literal prefix of another, redacting the shorter one first could fragment and leak a plaintext suffix of the longer one. Secrets are now redacted longest-first.
+
 ## [2.0.0] - 2026-07-05
 
 **Breaking:** minimum supported Node.js version raised from 18 to 20 (see below).
