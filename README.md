@@ -48,6 +48,14 @@ npm run build
 | `GRAPHQL_TOKEN` | No | Bearer token for GraphQL authentication (used for query/mutation execution). Omit for public APIs. |
 | `GRAPHQL_INTROSPECTION_TOKEN` | No | Bearer token for schema introspection, if it requires different credentials than execution (e.g. a separate schema registry). Defaults to `GRAPHQL_TOKEN` if unset. |
 | `MCP_AUTH_TOKEN` | No | Bearer token required by the hosted `/mcp` HTTP endpoint when `MCP_TRANSPORT=http` |
+| `GRAPHQL_MAX_TOOLS` | No | Maximum number of query/mutation tools to register. Queries are prioritized over mutations when truncating. Default `128`. |
+| `GRAPHQL_INCLUDE_MUTATIONS` | No | Set to `false` to exclude every mutation field entirely, for a read-only deployment. Default `true`. |
+| `GRAPHQL_MAX_RETRIES` | No | Retries (0–5) for `429`/`502`/`503`/`504` responses, honoring `Retry-After` when present. Default `0` (disabled). |
+
+For schemas with hundreds of fields (GitHub's GraphQL API has 284 root fields — 32 queries, 252
+mutations), `GRAPHQL_MAX_TOOLS` and `GRAPHQL_INCLUDE_MUTATIONS` are what keep registration bounded
+and predictable. If the cap truncates the schema, stderr logs exactly how many queries/mutations
+were registered vs. available.
 
 No configuration is required to try the server — with nothing set, it starts
 against the public demo API above and logs that it's doing so. See
@@ -67,15 +75,22 @@ Or pass them directly via the `claude mcp add` command (see below).
 
 ### Step 3: (Optional) Pre-generate schema snapshot
 
-By default the server introspects your schema live on startup — no file needed. Use this step only if your API has introspection disabled in production, or you want faster startup times:
+By default the server introspects your schema live on startup — no file needed, and it
+automatically retries at a shallower query depth if your API rejects the full-depth attempt (some
+APIs, especially CDN-fronted ones, enforce a query depth limit). Use this step only if your API
+has introspection disabled entirely in production, or you want faster startup times:
 
 ```bash
 curl -s -X POST https://your-api.example.com/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-bearer-token" \
-  -d '{"query":"{ __schema { queryType { fields { name description args { name description defaultValue type { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } type { kind name ofType { kind name ofType { kind name } } } } } mutationType { fields { name description args { name description defaultValue type { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } type { kind name ofType { kind name ofType { kind name } } } } } } }"}' \
+  -d '{"query":"{ __schema { queryType { fields { name description args { name description defaultValue type { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } type { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } } mutationType { fields { name description args { name description defaultValue type { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } type { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } } } }"}' \
   > schema-introspection.json
 ```
+
+If your API rejects this with a depth/complexity-limit error, shrink the `ofType { ... }` nesting
+(each level resolves one more `NonNull`/`List` wrapper — most real-world types need 2-3 levels;
+only doubly-wrapped lists like `[[Int!]!]!` need more).
 
 ## Adding to Claude Code
 
@@ -121,16 +136,101 @@ claude mcp list
 
 Then in a Claude Code session, run `/mcp` to see available servers and tools.
 
+## Examples
+
+Two worked walkthroughs — a small public schema with no configuration needed, then a large,
+real enterprise-scale schema requiring auth and tool-count limits.
+
+### Example 1: Countries API (small schema, no auth)
+
+This is the zero-config default — nothing to install or configure beyond the server itself.
+
+1. Add the server with no environment variables at all:
+
+   ```bash
+   claude mcp add --transport stdio graphql-countries -- mcp-graphql-bridge
+   ```
+
+2. Restart Claude Code (or run `/mcp` to confirm `graphql-countries` is connected). You should see
+   tools like `query__country`, `query__countries`, and `query__continents`.
+3. Ask Claude:
+
+   > Using graphql-countries, find the country with code "BR", then list its continent's other countries.
+
+   Claude calls `query__country({ code: "BR", __fields: "{ name continent { code name } }" })`,
+   then `query__continent` or `query__countries({ __fields: "{ name }" })` filtered by the result.
+4. Try an invalid code to see error passthrough:
+
+   > Look up the country with code "ZZZ".
+
+   Returns the GraphQL API's own error text — the bridge passes it through rather than masking it.
+
+### Example 2: GitHub GraphQL API (large schema, auth + tool limits)
+
+GitHub's GraphQL API has **284 root fields** (32 queries, 252 mutations) — far more than the
+`GRAPHQL_MAX_TOOLS` default of 128, and it needs a token for every request, including
+introspection (unlike GitHub's REST API, which allows some anonymous reads).
+
+1. Add the server, scoped to read-only access:
+
+   ```bash
+   export GH_TOKEN=ghp_your_personal_access_token  # or: source a gitignored .env file first
+
+   claude mcp add --transport stdio graphql-github \
+     --env GRAPHQL_API_URL=https://api.github.com/graphql \
+     --env GRAPHQL_INTROSPECTION_URL=https://api.github.com/graphql \
+     --env GRAPHQL_TOKEN=$GH_TOKEN \
+     --env GRAPHQL_INCLUDE_MUTATIONS=false \
+     graphql-bridge -- mcp-graphql-bridge
+   ```
+
+   `GRAPHQL_INCLUDE_MUTATIONS=false` registers all 32 (read-only) queries and zero mutations —
+   comfortably under the cap, and a meaningfully safer default for an AI agent than exposing all
+   252 write operations.
+2. Ask Claude:
+
+   > Using graphql-github, look up the repository facebook/react and tell me its star count.
+
+   Claude calls
+   `query__repository({ owner: "facebook", name: "react", __fields: "{ name stargazerCount }" })`.
+3. To also reach mutations, drop `GRAPHQL_INCLUDE_MUTATIONS=false` and raise the cap
+   (`GRAPHQL_MAX_TOOLS=400`), understanding that this exposes write access to your GitHub account
+   scoped to whatever permissions your token has.
+
 ## Available tools
 
 | Tool | Description |
 |---|---|
 | `query__<name>` | One tool per GraphQL query field |
 | `mutation__<name>` | One tool per GraphQL mutation field |
-| `execute_graphql` | Generic fallback — run any query or mutation |
+| `execute_graphql` | Generic fallback — run any query or mutation (mutations rejected if `GRAPHQL_INCLUDE_MUTATIONS=false`) |
 | `get_type_details` | Explore fields of a specific GraphQL type |
 
 All per-operation tools accept a special `__fields` argument where you can provide a custom GraphQL selection set (e.g. `{ id name status }`). If omitted, only scalar fields are returned.
+
+**Per-call auth override**: every tool (including `execute_graphql`) also accepts `bearer_token`
+and `custom_headers` arguments. If provided, they override `GRAPHQL_TOKEN`/no-auth for that single
+request only, letting Claude switch credentials per call without restarting the server.
+
+## Security
+
+- **The target API is fixed per deployment, never a per-request parameter.** Individual tool calls
+  can override *credentials* (`bearer_token`, `custom_headers`) but never the destination host —
+  `GRAPHQL_API_URL` is set once at deployment time. A shared server that let callers redirect it to
+  an arbitrary destination would be a Server-Side Request Forgery (SSRF) primitive; this design
+  rules that out by construction.
+- **Configured and per-call secrets are redacted from every response** before it reaches the
+  calling LLM.
+- **`GRAPHQL_INCLUDE_MUTATIONS=false`** excludes every mutation field from registration for a
+  genuinely read-only deployment — a meaningful trust boundary GraphQL's type system already
+  encodes, rather than relying on token scope alone. This is enforced for `execute_graphql` too:
+  it parses the query and rejects any mutation when this flag is off, rather than only omitting
+  the convenience `mutation__*` tools while leaving the generic fallback able to run anything.
+- **`MCP_AUTH_TOKEN`** gates the HTTP transport's `/mcp` endpoint for public-routable deployments;
+  requests are capped at 10MB.
+
+See [`docs/architecture.md`](docs/architecture.md) for the full design rationale and
+[`SECURITY.md`](SECURITY.md) to report a vulnerability.
 
 ## Docker
 
