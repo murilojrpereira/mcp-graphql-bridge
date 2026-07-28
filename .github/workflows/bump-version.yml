@@ -45,7 +45,7 @@ jobs:
           mv server.tmp server.json
           git add package.json package-lock.json server.json
           git commit -m "chore: release $NEW_TAG"
-          git tag "$NEW_TAG"
+          git tag -a "$NEW_TAG" -m "chore: release $NEW_TAG"
           git push origin main --follow-tags
           echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
 
