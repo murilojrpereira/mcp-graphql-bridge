@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-28
+
 ### Added
 - `GRAPHQL_MAX_TOOLS` (default 128) caps how many query/mutation tools get registered, prioritizing queries over mutations when truncating. Previously every root field registered with no cap at all — GitHub's GraphQL API alone has 284 (32 queries, 252 mutations).
 - `GRAPHQL_INCLUDE_MUTATIONS` (default `true`) — set to `false` to exclude every mutation field for a read-only deployment.
