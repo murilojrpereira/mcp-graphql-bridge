@@ -6,33 +6,57 @@
     "url": "https://github.com/murilojrpereira/mcp-graphql-bridge",
     "source": "github"
   },
-  "version": "1.0.1",
+  "version": "2.0.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-graphql-bridge",
-      "version": "1.0.1",
+      "version": "2.0.0",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "GRAPHQL_API_URL",
-          "description": "GraphQL endpoint URL used for executing queries and mutations",
-          "isRequired": true,
+          "description": "GraphQL endpoint URL used for executing queries and mutations. Defaults to the public Countries API.",
+          "isRequired": false,
           "isSecret": false
         },
         {
           "name": "GRAPHQL_INTROSPECTION_URL",
-          "description": "GraphQL endpoint URL used for schema introspection (can be the same as GRAPHQL_API_URL)",
-          "isRequired": true,
+          "description": "GraphQL endpoint URL used for schema introspection. Defaults to GRAPHQL_API_URL.",
+          "isRequired": false,
           "isSecret": false
         },
         {
           "name": "GRAPHQL_TOKEN",
-          "description": "Bearer token for authenticating with the GraphQL API. Omit for public or unauthenticated endpoints.",
+          "description": "Bearer token for authenticating query and mutation execution.",
           "isRequired": false,
           "isSecret": true
+        },
+        {
+          "name": "GRAPHQL_INTROSPECTION_TOKEN",
+          "description": "Bearer token for schema introspection. Defaults to GRAPHQL_TOKEN.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GRAPHQL_MAX_TOOLS",
+          "description": "Maximum number of generated query and mutation tools. Defaults to 128.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "GRAPHQL_INCLUDE_MUTATIONS",
+          "description": "Set to false to disable mutation tools and mutation execution. Defaults to true.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "GRAPHQL_MAX_RETRIES",
+          "description": "Retries for transient upstream responses. Defaults to 0.",
+          "isRequired": false,
+          "isSecret": false
         }
       ]
     }

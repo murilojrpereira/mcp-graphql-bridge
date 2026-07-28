@@ -78,6 +78,36 @@ emerges (a small, known set of clients sharing one deployment), that's a
 scoped addition worth revisiting — see the token model above for why it
 would only need to vary the *token*, not the *endpoint*.
 
+## Tool count cap and the query/mutation trust boundary
+
+Unlike a REST-to-MCP bridge, this project has no OpenAPI-style tags to filter
+by, but GraphQL's own type system already draws a meaningful boundary: query
+fields read, mutation fields write. `GRAPHQL_MAX_TOOLS` (default 128, mirrored
+from the equivalent OpenAPI-bridge setting) caps how many tools get
+registered against a large schema (GitHub's GraphQL API has 284 root fields —
+32 queries, 252 mutations — with no cap at all before this was added).
+`applySchemaFilters` (`src/tools.ts`) registers all queries first and only
+fills remaining budget with mutations, rather than cutting off in raw schema
+order, so a truncated deployment is more likely to still expose safe reads
+than to expose an arbitrary half of the schema. `GRAPHQL_INCLUDE_MUTATIONS=false`
+excludes mutations entirely for a genuinely read-only deployment. Either way,
+hitting the cap logs exactly how many queries/mutations were registered vs.
+available, instead of silently truncating with no indication of what's
+missing.
+
+## Retries
+
+`GRAPHQL_MAX_RETRIES` (default `0`, disabled) retries on HTTP `429`/`502`/
+`503`/`504` — status codes that conventionally mean the request never reached
+the API's business logic — honoring `Retry-After` when present and falling
+back to exponential backoff with jitter otherwise. This applies to mutations
+as well as queries, on the same reasoning as the OpenAPI bridge's equivalent
+setting: these specific statuses mean the request was rejected before being
+processed, not that it partially succeeded. As with that project, if the
+GraphQL API you're bridging supports an idempotency mechanism for mutations,
+prefer using it over relying on this being risk-free for every possible
+upstream.
+
 ## The default demo API
 
 If `GRAPHQL_API_URL` isn't set, the server falls back to a public demo API
@@ -90,10 +120,28 @@ default is in effect, and it's expected to be replaced with your own API for
 real use.
 
 Note: the demo API's hosting CDN enforces a query-depth limit that this
-project's introspection query (intentionally deep, to correctly resolve
-`NonNull`/`List` wrapper combinations like `[String!]!`) exceeds. A default
-install will log the existing "Schema introspection failed... falling back
-to generic query tool only" message and register only the `execute_graphql`
-and `get_type_details` tools rather than typed per-field tools. This is
-expected, pre-existing graceful degradation — not a new failure mode — and
-`execute_graphql` still works correctly against it.
+project's original introspection query (intentionally deep, to correctly
+resolve `NonNull`/`List` wrapper combinations like `[String!]!`) exceeded.
+That used to mean a default install would silently fall back to registering
+only `execute_graphql`/`get_type_details` instead of typed per-field tools —
+degradation that worked, but meant the zero-config quickstart never actually
+demonstrated the project's main feature.
+
+`loadSchemaViaIntrospection` (`src/introspection.ts`) now retries at a
+shallower, verified-safe query depth when the deep attempt is rejected, so
+introspection against the demo API succeeds instead of falling back. The
+generic-tools-only fallback still exists as a last resort if every depth
+attempt fails (e.g. introspection is genuinely disabled), and the real
+upstream error is now logged at each attempt instead of being swallowed
+behind a generic "introspection failed" message.
+
+Separately, no introspection depth is guaranteed to cover every real schema
+— a type wrapped deeper than whichever attempt succeeds will have its
+`ofType` chain truncated by the query itself. `getBaseType`/`typeString`
+(`src/introspection.ts`) treat a truncated chain as an `Unknown` type rather
+than crashing on `undefined`. This was previously a real crash: GitHub's
+GraphQL API (`marketplaceCategories: [MarketplaceCategory!]!`) wraps one
+level deeper than the old field-type query depth resolved, and registering
+that schema brought down the whole process with
+`TypeError: Cannot read properties of undefined (reading 'kind')` before a
+single tool was ever served.
