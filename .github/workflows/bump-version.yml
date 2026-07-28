@@ -39,7 +39,13 @@ jobs:
       - name: Bump version and push tag
         id: bump
         run: |
-          NEW_TAG=$(npm version ${{ inputs.bump }} -m "chore: release v%s")
+          NEW_TAG=$(npm version ${{ inputs.bump }} --no-git-tag-version)
+          VERSION="${NEW_TAG#v}"
+          jq --arg version "$VERSION" '.version = $version | .packages |= map(.version = $version)' server.json > server.tmp
+          mv server.tmp server.json
+          git add package.json package-lock.json server.json
+          git commit -m "chore: release $NEW_TAG"
+          git tag "$NEW_TAG"
           git push origin main --follow-tags
           echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
 

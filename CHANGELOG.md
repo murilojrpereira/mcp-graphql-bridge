@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `GRAPHQL_MAX_RETRIES` (default `0`, disabled) — opt-in retry with exponential backoff (honoring `Retry-After`) for `429`/`502`/`503`/`504` responses.
 - Secret redaction: configured and per-call tokens/headers are scrubbed from error text and response bodies before reaching the calling LLM.
 - Per-call `bearer_token`/`custom_headers` argument overrides on every tool, mirroring the OpenAPI bridge's multi-tenant credential model.
-- Real unit tests (65 across 6 new test files) for schema introspection, type resolution, Zod arg mapping, operation building, execution/retries, and HTTP auth — the source was refactored from one 468-line file into `introspection.ts`/`zod.ts`/`operation.ts`/`executor.ts`/`auth.ts`/`tools.ts` to make this possible. The previous test suite only asserted that certain strings appeared in the source file, not that any function behaved correctly.
+- Real unit tests (72 across 7 test files) for schema introspection, type resolution, Zod arg mapping, operation building, execution/retries, and HTTP auth — the source was refactored from one 468-line file into `introspection.ts`/`zod.ts`/`operation.ts`/`executor.ts`/`auth.ts`/`tools.ts` to make this possible. The previous test suite only asserted that certain strings appeared in the source file, not that any function behaved correctly.
 - Step-by-step README examples (Countries API + GitHub's GraphQL API) verified against the real APIs.
 - Updated `SECURITY.md` and a README "Security" section describing the fixed-target-URL (no SSRF) and secret-redaction design properties.
 
