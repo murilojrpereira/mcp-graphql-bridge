@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-08-29
+
+### Changed
+- Migrated from `@modelcontextprotocol/sdk` v1 to the v2 SDK packages (`@modelcontextprotocol/server`, `@modelcontextprotocol/node`), adding support for the stateless MCP protocol revision `2026-07-28` (no `initialize` handshake, no `Mcp-Session-Id`, `server/discover`, Multi Round-Trip Requests) while remaining backward-compatible with 2025-era clients. The HTTP transport already built a fresh `McpServer`/transport pair per request with no session ID, so this migration required no behavioral change to request handling — only the transport/import wiring and tool registration API (`server.tool()` → `server.registerTool()`).
+- Upgraded `zod` from v3 to v4. `z.record()` call sites updated to the new required two-argument signature (`z.record(z.string(), ...)`); tool input/output shapes are unaffected.
+
 ## [2.1.0] - 2026-07-28
 
 ### Added

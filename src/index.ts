@@ -2,9 +2,9 @@
 import type { ExecutorConfig, GqlField, IntrospectionResult, SchemaFilters } from "./types.js";
 import { existsSync, readFileSync } from "fs";
 import { createServer, type IncomingMessage } from "http";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
+import { McpServer } from "@modelcontextprotocol/server";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import "dotenv/config";
 import { GraphQLClient } from "graphql-request";
 import { z } from "zod";
@@ -113,25 +113,28 @@ async function main() {
   function buildServer(): McpServer {
     const server = new McpServer({
       name: "mcp-graphql-bridge",
-      version: "2.0.0",
+      version: "2.2.0",
     });
 
     registerTools(server, client, filteredQueries, filteredMutations, executorConfig);
 
-    server.tool(
+    server.registerTool(
       "execute_graphql",
-      "Execute any GraphQL query or mutation against the API. Use this when no specific tool exists for your operation.",
       {
-        query: z.string().describe("Full GraphQL query or mutation string including selection set"),
-        variables: z.record(z.unknown()).optional().describe("Variables for the operation"),
-        bearer_token: z
-          .string()
-          .optional()
-          .describe("Bearer token to authenticate this request (overrides GRAPHQL_TOKEN)"),
-        custom_headers: z
-          .record(z.string())
-          .optional()
-          .describe('Additional request headers as key-value pairs, e.g. {"X-Tenant-ID": "abc"}'),
+        description:
+          "Execute any GraphQL query or mutation against the API. Use this when no specific tool exists for your operation.",
+        inputSchema: z.object({
+          query: z.string().describe("Full GraphQL query or mutation string including selection set"),
+          variables: z.record(z.string(), z.unknown()).optional().describe("Variables for the operation"),
+          bearer_token: z
+            .string()
+            .optional()
+            .describe("Bearer token to authenticate this request (overrides GRAPHQL_TOKEN)"),
+          custom_headers: z
+            .record(z.string(), z.string())
+            .optional()
+            .describe('Additional request headers as key-value pairs, e.g. {"X-Tenant-ID": "abc"}'),
+        }),
       },
       async ({ query, variables, bearer_token, custom_headers }) => {
         if (!filters.includeMutations && queryContainsMutation(query)) {
@@ -152,11 +155,13 @@ async function main() {
       },
     );
 
-    server.tool(
+    server.registerTool(
       "get_type_details",
-      "Get fields of a specific GraphQL type to know what to put in __fields",
       {
-        typeName: z.string().describe("GraphQL type name, e.g. 'Repository', 'User', 'Issue'"),
+        description: "Get fields of a specific GraphQL type to know what to put in __fields",
+        inputSchema: z.object({
+          typeName: z.string().describe("GraphQL type name, e.g. 'Repository', 'User', 'Issue'"),
+        }),
       },
       async ({ typeName }) => {
         const query = `
@@ -227,7 +232,7 @@ async function main() {
           }
 
           const requestServer = buildServer();
-          const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+          const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
           await requestServer.connect(transport);
           res.on("close", () => {
             void transport.close();

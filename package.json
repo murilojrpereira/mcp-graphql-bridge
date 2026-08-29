@@ -1,6 +1,6 @@
 {
   "name": "mcp-graphql-bridge",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Generic MCP server that bridges any GraphQL API to Claude Code — one tool per query and mutation, auto-discovered via schema introspection.",
   "type": "module",
   "main": "dist/index.js",
@@ -50,11 +50,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.2",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "dotenv": "^16.4.7",
     "graphql": "^16.10.0",
     "graphql-request": "^7.1.2",
-    "zod": "^3.24.2"
+    "zod": "^4.5.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
