@@ -1,6 +1,6 @@
 import type { CallOverrides } from "./executor.js";
 import type { ExecutorConfig, GqlField, SchemaFilters } from "./types.js";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type { GraphQLClient } from "graphql-request";
 import { z } from "zod";
 import { executeOperation } from "./executor.js";
@@ -50,7 +50,7 @@ export function applySchemaFilters(
 
 const RESERVED_ARGS = new Set(["bearer_token", "custom_headers"]);
 
-function withCallOverrides(shape: Record<string, z.ZodTypeAny>, fieldName: string): Record<string, z.ZodTypeAny> {
+function withCallOverrides(shape: Record<string, z.ZodType>, fieldName: string): Record<string, z.ZodType> {
   const result = { ...shape };
   for (const reserved of RESERVED_ARGS) {
     if (reserved in result) {
@@ -62,7 +62,7 @@ function withCallOverrides(shape: Record<string, z.ZodTypeAny>, fieldName: strin
     .optional()
     .describe("Bearer token to authenticate this request (overrides GRAPHQL_TOKEN)");
   result.custom_headers = z
-    .record(z.string())
+    .record(z.string(), z.string())
     .optional()
     .describe('Additional request headers as key-value pairs, e.g. {"X-Tenant-ID": "abc"}');
   return result;
@@ -102,10 +102,12 @@ function registerField(
   const argsSchema = withCallOverrides(buildArgsSchema(field.args), field.name);
   const defaultFields = isScalar(field.type) ? "" : "{ __typename }";
 
-  server.tool(
+  server.registerTool(
     `${kind}__${field.name}`,
-    `[${kind.toUpperCase()}] ${field.description ?? field.name}`,
-    argsSchema,
+    {
+      description: `[${kind.toUpperCase()}] ${field.description ?? field.name}`,
+      inputSchema: z.object(argsSchema),
+    },
     async (rawArgs) => {
       // bearer_token/custom_headers are extracted via toCallOverrides() below — strip them here so
       // they aren't sent to the API as GraphQL variables.
