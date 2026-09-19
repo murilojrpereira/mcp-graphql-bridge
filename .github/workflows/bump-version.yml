@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: 'Version bump type'
+        description: 'Bump type. Pick the one that yields the version already headed in CHANGELOG.md (patch = fixes, minor = features, major = breaking). Never hand-edit versions.'
         required: true
         type: choice
         options:
