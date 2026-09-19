@@ -6,12 +6,12 @@
     "url": "https://github.com/murilojrpereira/mcp-graphql-bridge",
     "source": "github"
   },
-  "version": "2.1.0",
+  "version": "2.1.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-graphql-bridge",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "transport": {
         "type": "stdio"
       },
