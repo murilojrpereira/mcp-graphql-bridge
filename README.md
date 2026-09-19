@@ -287,6 +287,8 @@ npm run build # one-off TypeScript compile
 npm start     # run the compiled server
 ```
 
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution guidelines and the maintainer release process.
+
 ## Troubleshooting
 
 ### Error: Cannot find module '.../index.js'
