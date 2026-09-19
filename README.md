@@ -136,6 +136,12 @@ claude mcp list
 
 Then in a Claude Code session, run `/mcp` to see available servers and tools.
 
+### MCP Registry
+
+This server is published to the official [MCP Registry](https://registry.modelcontextprotocol.io) as
+`io.github.murilojrpereira/mcp-graphql-bridge`, so MCP clients that browse the registry can discover
+and install it from there.
+
 ## Examples
 
 Two worked walkthroughs — a small public schema with no configuration needed, then a large,
