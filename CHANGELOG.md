@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.2.0] - 2026-08-29
+## [2.2.0] - 2026-10-19
+
+### Added
+- Dependabot configuration (`.github/dependabot.yml`) for weekly `npm` and GitHub Actions version updates, with minor/patch bumps grouped into production and development PRs to reduce review noise.
 
 ### Changed
 - Migrated from `@modelcontextprotocol/sdk` v1 to the v2 SDK packages (`@modelcontextprotocol/server`, `@modelcontextprotocol/node`), adding support for the stateless MCP protocol revision `2026-07-28` (no `initialize` handshake, no `Mcp-Session-Id`, `server/discover`, Multi Round-Trip Requests) while remaining backward-compatible with 2025-era clients. The HTTP transport already built a fresh `McpServer`/transport pair per request with no session ID, so this migration required no behavioral change to request handling — only the transport/import wiring and tool registration API (`server.tool()` → `server.registerTool()`).
 - Upgraded `zod` from v3 to v4. `z.record()` call sites updated to the new required two-argument signature (`z.record(z.string(), ...)`); tool input/output shapes are unaffected.
+
+### Security
+- Refreshed transitive dependencies to patch advisories flagged by `npm audit`, reducing findings from 14 (10 high, 4 moderate) to 3 high — all confined to the dev-only `nodemon → chokidar → braces` chain, which currently has no patched upstream release. Patched: `brace-expansion` (high, DoS), `vite` (high, path traversal / arbitrary file read in the dev server), `postcss` (high, XSS and source-map file disclosure), `picomatch` (high, ReDoS), `source-map-js` (high, event-loop DoS), `@hono/node-server` (moderate, `serveStatic` path traversal), and `vitest`/`@vitest/*` (moderate, path traversal). No production runtime dependency was affected.
 
 ## [2.1.0] - 2026-07-28
 
