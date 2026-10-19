@@ -11,7 +11,8 @@
     "skipLibCheck": true,
     "noImplicitAny": true,
     "strict": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules", "src/**/*.test.ts", "src/**/*.spec.ts"]
